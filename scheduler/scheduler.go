@@ -184,6 +184,25 @@ func (sched *Scheduler) RunFilterPlugins(ctx context.Context, state *framework.C
 		for _, pl := range sched.filterPlugins {
 			// schedule_one.go 562
 			// ~/k8s.io/kubernetes/pkg/scheduler/framework/runtime/framework.go 839
+			// it will run
+			// 1. CSILimiter
+			// 2. Fit (if node has sufficient resources)
+			// 3. InterPodAffinity (checks inter pod affinity)
+			// 4. MatchFilterPlugin (is a filter plugin which return Success when the evaluated pod and node
+			//    have the same name; otherwise return Unschedulable.)
+			// 5. nodeAffinity (checks if a pod node selector matches the node label)
+			// 6. node_name (checks if a pod spec node name matches the current node)
+			// 7. node_ports (checks if a node has free ports for the requested pod ports)
+			// 8. node_Unschedulable (filters nodes that set node.Spec.Unschedulable=true unless
+			//    the pod tolerates {key=node.kubernetes.io/unschedulable, effect:NoSchedule} taint.)
+			// 9. PodTopologySpread (ensures pod's topologySpreadConstraints拓扑扩展约束 is satisfied)
+			// 10. TaintToleration (checks if a pod tolerates a node's taints)
+			// 11. VolumeBinding (created for the pod and used in Reserve and PreBind phases)
+			// 12. VolumeRestrictions (checks volume restrictions限制)
+			// 13. VolumeZone (checks volume zone)
+			// 14. dynamicResources (ensures that ResourceClaims are allocated)
+			// 15. instrumentedFilterPlugin
+			// 16. nonCSILimits contains information to check the max number of volumes for a plugin
 			status = pl.Filter(ctx, state, pod, nodeInfo)
 			if !status.IsSuccess() {
 				status.SetFailedPlugin(pl.Name())
@@ -559,4 +578,8 @@ func (sched *Scheduler) addPodToSchedulingQueue(obj interface{}) {
 	if err := sched.SchedulingQueue.Add(pod); err != nil {
 		utilruntime.HandleError(fmt.Errorf("unable to queue %T: %v", obj, err))
 	}
+}
+
+func (sched *Scheduler) GetWaitingPod(uid types.UID) *waitingpod.WaitingPod {
+	return sched.waitingPods[uid]
 }
