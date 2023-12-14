@@ -166,6 +166,7 @@ func (sched *Scheduler) scheduleOne(ctx context.Context) {
 }
 
 func (sched *Scheduler) Run(ctx context.Context) {
+	// ~/k8s.io/kubernetes/pkg/scheduler/scheduler.go 414
 	wait.UntilWithContext(ctx, sched.scheduleOne, 0)
 }
 
